@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --page: 232 239 247;
+  --surface: 255 255 255;
+  --ink: 10 27 61;
+  --muted: 90 106 133;
+  --line: 201 214 230;
+  --brand: 10 27 61;
+  --brand-hover: 22 48 107;
+  --onbrand: 255 255 255;
+  --signal: 255 198 41;
+  --alert: 184 48 31;
+  --ok: 31 122 82;
+  --runway: 10 27 61;
+  --focus: 22 48 107;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --page: 10 18 36;
+  --surface: 17 28 51;
+  --ink: 232 239 247;
+  --muted: 154 169 196;
+  --line: 36 50 79;
+  --brand: 255 198 41;
+  --brand-hover: 255 214 92;
+  --onbrand: 10 27 61;
+  --signal: 255 198 41;
+  --alert: 255 122 102;
+  --ok: 76 195 138;
+  --runway: 36 50 79;
+  --focus: 255 198 41;
+}
+
+@layer base {
+  html {
+    background: rgb(var(--page));
+  }
+  body {
+    @apply bg-page font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    outline: 3px solid rgb(var(--focus));
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .wordmark {
+    font-family: "Archivo", "Arial Narrow", Arial, sans-serif;
+    font-weight: 800;
+    font-stretch: 115%;
+    letter-spacing: -0.02em;
+    line-height: 0.9;
+  }
+
+  /* Runway: a strip with a yellow centerline */
+  .runway {
+    position: relative;
+    height: 10px;
+    border-radius: 2px;
+    background: rgb(var(--runway));
+  }
+  .runway::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgb(var(--signal)) 0 22px,
+      transparent 22px 40px
+    );
+  }
+
+  .caret::after {
+    content: "";
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.12em;
+    background: rgb(var(--ink));
+    animation: blink 1s steps(2, start) infinite;
+  }
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret::after {
+    animation: none;
+  }
+}

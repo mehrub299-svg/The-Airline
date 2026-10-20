@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: #e8eff7;
+  }
+  body {
+    @apply bg-altitude font-sans text-navy antialiased;
+  }
+  :focus-visible {
+    outline: 3px solid #16306b;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .wordmark {
+    font-family: "Archivo", "Arial Narrow", Arial, sans-serif;
+    font-weight: 800;
+    font-stretch: 115%;
+    letter-spacing: -0.02em;
+    line-height: 0.9;
+  }
+
+  /* Runway: navy strip with a yellow centerline */
+  .runway {
+    position: relative;
+    height: 10px;
+    border-radius: 2px;
+    background: #0a1b3d;
+  }
+  .runway::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+    background-image: repeating-linear-gradient(90deg, #ffc629 0 22px, transparent 22px 40px);
+  }
+
+  .caret::after {
+    content: "";
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.12em;
+    background: #0a1b3d;
+    animation: blink 1s steps(2, start) infinite;
+  }
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret::after {
+    animation: none;
+  }
+}
