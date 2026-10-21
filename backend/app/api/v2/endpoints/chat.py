@@ -16,7 +16,10 @@ async def chat_v2(body: ChatRequest, current_user: User = Depends(get_current_us
     if not await feature_flags.is_enabled(feature_flags.RAG_V2, current_user.tenant_id):
         raise PermissionDeniedError("RAG v2 is not enabled for your workspace")
 
-    prepared = await rag.prepare(current_user, body.message, body.chat_id, top_k=rag.TOP_K_V2)
+    document_ids = list(dict.fromkeys(body.document_ids)) if body.document_ids else None
+    prepared = await rag.prepare(
+        current_user, body.message, body.chat_id, top_k=rag.TOP_K_V2, document_ids=document_ids
+    )
     return StreamingResponse(
         rag.stream_answer(prepared),
         media_type="text/event-stream",

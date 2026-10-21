@@ -29,6 +29,7 @@ SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 NO_DOCUMENTS_TEXT = (
     "I couldn't find any uploaded documents to answer from. Please upload a document first."
 )
+NO_SELECTED_CONTENT_TEXT = "The selected documents don't contain anything I can answer from."
 _STATIC_SLICE = 24  # characters per SSE event when replaying cached/canned text
 
 
@@ -79,16 +80,28 @@ async def _undo_prepare(
             logger.exception("Failed to release chat slot")
 
 
-async def prepare(user: User, question: str, chat_id: uuid.UUID | None, top_k: int) -> PreparedAnswer:
+async def prepare(
+    user: User,
+    question: str,
+    chat_id: uuid.UUID | None,
+    top_k: int,
+    document_ids: list[uuid.UUID] | None = None,
+) -> PreparedAnswer:
     """Everything that can fail runs here, BEFORE the streaming response starts, so errors are real
-    HTTP statuses (503, 429, 404). On any failure the chat lock and cache claim are undone."""
+    HTTP statuses (503, 429, 404). On any failure the chat lock and cache claim are undone.
+
+    document_ids=None means "all documents" and uses the semantic cache. A subset skips the cache
+    entirely (no lookup, claim or write), because a cached answer depends on which documents were used."""
     tenant_id = user.tenant_id
+    use_cache = document_ids is None
 
     await feature_flags.require_ai_enabled()  # master switch: 503 without touching the DB or OpenRouter
 
     if chat_id is not None:
         async with tenant_session(tenant_id) as session:
-            exists = await session.scalar(select(Chat.id).where(Chat.id == chat_id))
+            exists = await session.scalar(
+                select(Chat.id).where(Chat.id == chat_id, Chat.user_id == user.id)
+            )
         if exists is None:
             raise NotFoundError("Chat not found")
 
@@ -100,10 +113,13 @@ async def prepare(user: User, question: str, chat_id: uuid.UUID | None, top_k: i
         embedding = await embed_query(question)
 
         async with tenant_session(tenant_id) as session:  # semantic cache (middle)
-            found = await semantic_cache.lookup(session, embedding)
+            if use_cache:
+                found = await semantic_cache.lookup(session, embedding)
+            else:
+                found = semantic_cache.CacheLookup("miss")
             chunks: list[str] = []
             if found.kind == "miss":
-                chunks = await retrieve_chunks(session, embedding, top_k)
+                chunks = await retrieve_chunks(session, embedding, top_k, document_ids)
 
         static_text: str | None = None
         if found.kind == "in_flight":
@@ -111,11 +127,12 @@ async def prepare(user: User, question: str, chat_id: uuid.UUID | None, top_k: i
         if found.kind == "hit":
             static_text = found.response_text
         elif not chunks:
-            static_text = NO_DOCUMENTS_TEXT
+            static_text = NO_DOCUMENTS_TEXT if use_cache else NO_SELECTED_CONTENT_TEXT
         else:
             await check_monthly_quota(tenant_id)  # Door 2: after a cache miss, before OpenRouter
-            async with tenant_session(tenant_id) as session:
-                cache_id = await semantic_cache.claim(session, tenant_id, question, embedding)
+            if use_cache:
+                async with tenant_session(tenant_id) as session:
+                    cache_id = await semantic_cache.claim(session, tenant_id, question, embedding)
             upstream = await llm.open_stream(question, chunks)
 
         saved_chat_id = await _save_user_message(user, chat_id, question)
