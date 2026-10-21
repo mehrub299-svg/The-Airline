@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Tip from "./Tip.jsx";
 
 function PinIcon({ filled }) {
   return (
@@ -15,6 +16,26 @@ function PinIcon({ filled }) {
     >
       <path d="M12 17v5" />
       <path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z" />
+    </svg>
+  );
+}
+
+function HideIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+      <path d="M16 10l-2 2 2 2" />
     </svg>
   );
 }
@@ -53,12 +74,32 @@ export default function Sidebar({
   onSelect,
   onTogglePin,
   onNewChat,
+  onHide,
   user,
   billing,
   onOpenSettings,
   onSignOut,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const footerRef = useRef(null);
+
+  // Close the account menu when clicking elsewhere or pressing Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event) => {
+      if (footerRef.current && !footerRef.current.contains(event.target)) setMenuOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
   const pinnedChats = chats.filter((c) => pinned.has(c.id));
   const recentChats = chats.filter((c) => !pinned.has(c.id));
   const isPro = billing?.plan_tier === "PRO";
@@ -78,8 +119,17 @@ export default function Sidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="px-4 pt-4">
+      <div className="flex items-center justify-between gap-2 px-4 pt-4">
         <p className="wordmark text-[1.6rem] text-ink">THE AIRLINE</p>
+        <Tip label="Hide sidebar" align="right">
+          <button
+            onClick={onHide}
+            aria-label="Hide sidebar"
+            className="rounded-lg p-2 text-muted hover:bg-page hover:text-ink"
+          >
+            <HideIcon />
+          </button>
+        </Tip>
       </div>
 
       <div className="px-3 pt-4">
@@ -111,40 +161,33 @@ export default function Sidebar({
         )}
       </nav>
 
-      <div className="relative border-t border-line p-3">
+      <div ref={footerRef} className="relative border-t border-line p-3">
         {menuOpen && (
-          <>
+          <div
+            role="menu"
+            className="absolute bottom-full left-3 right-3 z-50 mb-2 rounded-xl bg-surface p-1 shadow-lg ring-1 ring-line"
+          >
             <button
-              aria-label="Close menu"
-              onClick={() => setMenuOpen(false)}
-              className="fixed inset-0 z-40 cursor-default"
-            />
-            <div
-              role="menu"
-              className="absolute bottom-full left-3 right-3 z-50 mb-2 rounded-xl bg-surface p-1 shadow-lg ring-1 ring-line"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenSettings();
+              }}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-page"
             >
-              <button
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onOpenSettings();
-                }}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-page"
-              >
-                Settings
-              </button>
-              <button
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onSignOut();
-                }}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-alert hover:bg-page"
-              >
-                Sign out
-              </button>
-            </div>
-          </>
+              Settings
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                onSignOut();
+              }}
+              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-alert hover:bg-page"
+            >
+              Sign out
+            </button>
+          </div>
         )}
 
         <button

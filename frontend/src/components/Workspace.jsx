@@ -4,9 +4,11 @@ import ChatPanel from "./ChatPanel.jsx";
 import DocumentsPanel from "./DocumentsPanel.jsx";
 import SettingsDialog from "./SettingsDialog.jsx";
 import Sidebar from "./Sidebar.jsx";
+import Tip from "./Tip.jsx";
 
 const fmt = (n) => new Intl.NumberFormat().format(n);
 const PINS_KEY = "airline.pins";
+const PANELS_KEY = "airline.panels";
 const isWide = () => window.matchMedia("(min-width: 768px)").matches;
 const countText = (n) => `${n} ${n === 1 ? "document" : "documents"}`;
 
@@ -18,10 +20,19 @@ function loadPins() {
   }
 }
 
-function MenuIcon() {
+function loadPanels() {
+  try {
+    return JSON.parse(localStorage.getItem(PANELS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function SidebarIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M4 6h16M4 12h16M4 18h16" />
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
     </svg>
   );
 }
@@ -32,6 +43,32 @@ function FilesIcon() {
       <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
       <path d="M14 3v5h5" />
     </svg>
+  );
+}
+
+// A side panel that slides in and out. On phones it is a drawer over the page; on computers it
+// sits in the row and its width animates to zero, so the chat area grows to fill the space.
+function SidePanel({ open, side, children }) {
+  const left = side === "left";
+  const base =
+    "fixed inset-y-0 z-30 flex min-h-0 max-w-[88vw] flex-col overflow-hidden bg-surface shadow-xl " +
+    "md:static md:z-auto md:max-w-none md:shrink-0 md:transform-none md:rounded-2xl md:shadow-none " +
+    "motion-reduce:[transition:none]";
+  const placement = left ? "left-0 w-72" : "right-0 w-80";
+  const openState = left
+    ? "visible translate-x-0 md:mr-4 md:ring-1 md:ring-line [transition:transform_200ms_ease-out,width_200ms_ease-out,margin_200ms_ease-out]"
+    : "visible translate-x-0 md:ml-4 md:ring-1 md:ring-line [transition:transform_200ms_ease-out,width_200ms_ease-out,margin_200ms_ease-out]";
+  const closedState = left
+    ? "invisible -translate-x-full md:w-0 [transition:transform_200ms_ease-out,width_200ms_ease-out,margin_200ms_ease-out,visibility_0s_linear_200ms]"
+    : "invisible translate-x-full md:w-0 [transition:transform_200ms_ease-out,width_200ms_ease-out,margin_200ms_ease-out,visibility_0s_linear_200ms]";
+
+  return (
+    <aside
+      aria-hidden={!open}
+      className={`${base} ${placement} ${open ? openState : closedState}`}
+    >
+      <div className={`min-h-0 flex-1 ${left ? "w-72" : "w-80"}`}>{children}</div>
+    </aside>
   );
 }
 
@@ -50,12 +87,22 @@ export default function Workspace({
   const [pinned, setPinned] = useState(loadPins);
   const [activeChatId, setActiveChatId] = useState(null);
   const [viewKey, setViewKey] = useState(0);
-  const [leftOpen, setLeftOpen] = useState(isWide);
-  const [rightOpen, setRightOpen] = useState(isWide);
+  const [leftOpen, setLeftOpen] = useState(() => (isWide() ? loadPanels().left !== false : false));
+  const [rightOpen, setRightOpen] = useState(() => (isWide() ? loadPanels().right !== false : false));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [useV2, setUseV2] = useState(false);
   const [notice, setNotice] = useState(initialNotice ? { tone: "info", text: initialNotice } : null);
   const [upgrading, setUpgrading] = useState(false);
+
+  // Remember which panels are open (computers only; on phones they are temporary drawers).
+  useEffect(() => {
+    if (!isWide()) return;
+    try {
+      localStorage.setItem(PANELS_KEY, JSON.stringify({ left: leftOpen, right: rightOpen }));
+    } catch {
+      // not remembered this time
+    }
+  }, [leftOpen, rightOpen]);
 
   const refreshChats = useCallback(async () => {
     try {
@@ -148,18 +195,23 @@ export default function Workspace({
     }
   }
 
+  const leftLabel = leftOpen ? "Hide sidebar" : "Show sidebar";
+  const rightLabel = rightOpen ? "Hide documents" : "Show documents";
+
   return (
     <div className="flex h-dvh flex-col">
       <header className="px-3 pt-3 md:px-5 md:pt-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button
-            onClick={() => setLeftOpen((open) => !open)}
-            aria-label="Toggle chat list"
-            aria-expanded={leftOpen}
-            className="rounded-lg p-2 hover:bg-surface"
-          >
-            <MenuIcon />
-          </button>
+          <Tip label={leftLabel}>
+            <button
+              onClick={() => setLeftOpen((open) => !open)}
+              aria-label={leftLabel}
+              aria-expanded={leftOpen}
+              className="rounded-lg p-2 hover:bg-surface"
+            >
+              <SidebarIcon />
+            </button>
+          </Tip>
           <h1 className="min-w-0 flex-1 truncate font-display text-lg font-bold">{activeTitle}</h1>
 
           <div className="flex flex-wrap items-center gap-3 md:gap-4">
@@ -200,15 +252,17 @@ export default function Workspace({
               </button>
             )}
 
-            <button
-              onClick={() => setRightOpen((open) => !open)}
-              aria-label="Toggle documents"
-              aria-expanded={rightOpen}
-              className="flex items-center gap-2 rounded-lg p-2 text-sm font-semibold hover:bg-surface"
-            >
-              <FilesIcon />
-              <span className="hidden sm:inline">Documents</span>
-            </button>
+            <Tip label={rightLabel} align="right">
+              <button
+                onClick={() => setRightOpen((open) => !open)}
+                aria-label={rightLabel}
+                aria-expanded={rightOpen}
+                className="flex items-center gap-2 rounded-lg p-2 text-sm font-semibold hover:bg-surface"
+              >
+                <FilesIcon />
+                <span className="hidden sm:inline">Documents</span>
+              </button>
+            </Tip>
           </div>
         </div>
         <div className="runway mt-3" aria-hidden="true" />
@@ -230,25 +284,21 @@ export default function Workspace({
 
       {leftOpen && (
         <button
-          aria-label="Close chat list"
+          aria-label="Hide sidebar"
           onClick={() => setLeftOpen(false)}
           className="fixed inset-0 z-20 bg-ink/40 md:hidden"
         />
       )}
       {rightOpen && (
         <button
-          aria-label="Close documents"
+          aria-label="Hide documents"
           onClick={() => setRightOpen(false)}
           className="fixed inset-0 z-20 bg-ink/40 md:hidden"
         />
       )}
 
-      <div className="flex min-h-0 flex-1 md:gap-4 md:px-5 md:pb-5 md:pt-4">
-        <aside
-          className={`${
-            leftOpen ? "flex" : "hidden"
-          } fixed inset-y-0 left-0 z-30 min-h-0 w-72 max-w-[85vw] flex-col bg-surface shadow-xl md:static md:z-auto md:max-w-none md:shrink-0 md:rounded-2xl md:shadow-none md:ring-1 md:ring-line`}
-        >
+      <div className="flex min-h-0 flex-1 md:px-5 md:pb-5 md:pt-4">
+        <SidePanel open={leftOpen} side="left">
           <Sidebar
             chats={chats}
             activeChatId={activeChatId}
@@ -256,12 +306,13 @@ export default function Workspace({
             onSelect={openChat}
             onTogglePin={togglePin}
             onNewChat={newChat}
+            onHide={() => setLeftOpen(false)}
             user={user}
             billing={billing}
             onOpenSettings={() => setSettingsOpen(true)}
             onSignOut={onSignOut}
           />
-        </aside>
+        </SidePanel>
 
         <main className="min-w-0 flex-1 px-3 pb-3 pt-3 md:p-0">
           <div className="h-full min-h-0 rounded-2xl bg-surface ring-1 ring-line">
@@ -281,11 +332,7 @@ export default function Workspace({
           </div>
         </main>
 
-        <aside
-          className={`${
-            rightOpen ? "flex" : "hidden"
-          } fixed inset-y-0 right-0 z-30 min-h-0 w-80 max-w-[90vw] flex-col bg-surface shadow-xl md:static md:z-auto md:max-w-none md:shrink-0 md:rounded-2xl md:shadow-none md:ring-1 md:ring-line`}
-        >
+        <SidePanel open={rightOpen} side="right">
           <DocumentsPanel
             docs={docs}
             setDocs={setDocs}
@@ -293,7 +340,7 @@ export default function Workspace({
             setUnselected={setUnselected}
             onClose={() => setRightOpen(false)}
           />
-        </aside>
+        </SidePanel>
       </div>
 
       {settingsOpen && (

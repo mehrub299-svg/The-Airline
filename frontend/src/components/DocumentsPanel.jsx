@@ -1,3 +1,4 @@
+import Tip from "./Tip.jsx";
 import { useRef, useState } from "react";
 import { ACCEPTED_EXTENSIONS, MAX_UPLOAD_BYTES, api } from "../api.js";
 
@@ -87,9 +88,29 @@ export default function DocumentsPanel({ docs, setDocs, unselected, setUnselecte
     <section className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between px-4 pt-4">
         <h2 className="font-display text-lg font-bold">Documents</h2>
-        <button onClick={onClose} className="text-sm font-semibold text-muted underline md:hidden">
-          Close
-        </button>
+        <Tip label="Hide documents" align="right">
+          <button
+            onClick={onClose}
+            aria-label="Hide documents"
+            className="rounded-lg p-2 text-muted hover:bg-page hover:text-ink"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M15 4v16" />
+              <path d="M8 10l2 2-2 2" />
+            </svg>
+          </button>
+        </Tip>
       </div>
 
       <p className="px-4 pt-1 text-sm text-muted">
