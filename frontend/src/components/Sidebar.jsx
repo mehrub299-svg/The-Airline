@@ -40,7 +40,53 @@ function HideIcon() {
   );
 }
 
-function ChatRow({ chat, active, pinned, onSelect, onTogglePin }) {
+function TrashIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M6 6l1 14h10l1-14" />
+    </svg>
+  );
+}
+
+function ChatRow({ chat, active, pinned, onSelect, onTogglePin, onDelete }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <li>
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-page px-3 py-2 text-sm">
+          <span className="truncate">Delete this chat?</span>
+          <span className="shrink-0 space-x-3 text-xs font-semibold">
+            <button
+              onClick={() => {
+                setConfirming(false);
+                onDelete(chat.id);
+              }}
+              className="text-alert underline"
+            >
+              Delete
+            </button>
+            <button onClick={() => setConfirming(false)} className="text-muted underline">
+              Cancel
+            </button>
+          </span>
+        </div>
+      </li>
+    );
+  }
+
   return (
     <li>
       <div className={`group flex items-center gap-1 rounded-lg ${active ? "bg-page" : "hover:bg-page"}`}>
@@ -56,11 +102,18 @@ function ChatRow({ chat, active, pinned, onSelect, onTogglePin }) {
           onClick={() => onTogglePin(chat.id)}
           aria-label={pinned ? "Unpin chat" : "Pin chat"}
           aria-pressed={pinned}
-          className={`mr-1 rounded p-1.5 text-muted hover:text-ink ${
+          className={`rounded p-1.5 text-muted hover:text-ink ${
             pinned ? "" : "opacity-60 focus:opacity-100 group-hover:opacity-100"
           }`}
         >
           <PinIcon filled={pinned} />
+        </button>
+        <button
+          onClick={() => setConfirming(true)}
+          aria-label="Delete chat"
+          className="mr-1 rounded p-1.5 text-muted opacity-60 hover:text-alert focus:opacity-100 group-hover:opacity-100"
+        >
+          <TrashIcon />
         </button>
       </div>
     </li>
@@ -73,6 +126,7 @@ export default function Sidebar({
   pinned,
   onSelect,
   onTogglePin,
+  onDelete,
   onNewChat,
   onHide,
   user,
@@ -114,6 +168,7 @@ export default function Sidebar({
         pinned={pinned.has(chat.id)}
         onSelect={onSelect}
         onTogglePin={onTogglePin}
+        onDelete={onDelete}
       />
     ));
 

@@ -1,3 +1,4 @@
+import Markdown from "./Markdown.jsx";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 
@@ -145,13 +146,9 @@ export default function ChatPanel({
                 ) : (
                   <div className="max-w-[46rem] border-l-4 border-signal pl-4">
                     {m.text ? (
-                      <p
-                        className={`whitespace-pre-wrap break-words leading-relaxed ${
-                          m.status === "streaming" ? "caret" : ""
-                        }`}
-                      >
-                        {m.text}
-                      </p>
+                      <div className={`break-words ${m.status === "streaming" ? "caret" : ""}`}>
+                        <Markdown text={m.text} />
+                      </div>
                     ) : (
                       m.status === "streaming" && (
                         <p className="caret text-muted">Searching your documents</p>

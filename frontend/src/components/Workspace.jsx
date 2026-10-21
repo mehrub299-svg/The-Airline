@@ -173,6 +173,26 @@ export default function Workspace({
       // pins just won't persist
     }
   }
+  async function deleteChat(id) {
+    try {
+      await api.deleteChat(id);
+    } catch (err) {
+      setNotice({ tone: "error", text: err.message });
+      return;
+    }
+    if (pinned.has(id)) {
+      const next = new Set(pinned);
+      next.delete(id);
+      setPinned(next);
+      try {
+        localStorage.setItem(PINS_KEY, JSON.stringify([...next]));
+      } catch {
+        // pins just won't persist
+      }
+    }
+    if (id === activeChatId) newChat();
+    refreshChats();
+  }
 
   async function upgrade() {
     setUpgrading(true);
@@ -305,6 +325,7 @@ export default function Workspace({
             pinned={pinned}
             onSelect={openChat}
             onTogglePin={togglePin}
+            onDelete={deleteChat}
             onNewChat={newChat}
             onHide={() => setLeftOpen(false)}
             user={user}

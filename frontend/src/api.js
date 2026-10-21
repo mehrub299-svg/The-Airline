@@ -216,6 +216,9 @@ export const api = {
 
   listChats: () => getJson("/api/v1/chats"),
   chatMessages: (id) => getJson(`/api/v1/chats/${id}/messages`),
+  async deleteChat(id) {
+    await request(`/api/v1/chats/${id}`, { method: "DELETE" });
+  },
 
   streamChat,
 };

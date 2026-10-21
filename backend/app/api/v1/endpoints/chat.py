@@ -1,8 +1,8 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends ,Response
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import select ,delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_tenant_db
@@ -60,3 +60,19 @@ async def chat_messages(
         select(Message).where(Message.chat_id == chat_id).order_by(Message.created_at, Message.id)
     )
     return result.all()
+
+@router.delete("/chats/{chat_id}", status_code=204)
+async def delete_chat(
+    chat_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_tenant_db),
+):
+    owned = await session.scalar(
+        select(Chat.id).where(Chat.id == chat_id, Chat.user_id == current_user.id)
+    )
+    if owned is None:
+        raise NotFoundError("Chat not found")
+
+    await session.execute(delete(Message).where(Message.chat_id == chat_id))
+    await session.execute(delete(Chat).where(Chat.id == chat_id))
+    return Response(status_code=204)
