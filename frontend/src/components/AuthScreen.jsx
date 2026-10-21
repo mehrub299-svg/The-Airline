@@ -6,10 +6,13 @@ const inputClass =
 const labelClass = "mb-1.5 block text-sm font-semibold text-ink";
 
 export default function AuthScreen({ onAuthed }) {
+  const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [workspace, setWorkspace] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const registering = mode === "register";
 
   async function submit(event) {
     event.preventDefault();
@@ -17,14 +20,11 @@ export default function AuthScreen({ onAuthed }) {
     setBusy(true);
     setError("");
     try {
-      await api.login(email.trim(), password);
+      if (registering) await api.register(email.trim(), password, workspace.trim());
+      else await api.login(email.trim(), password);
       await onAuthed();
     } catch (err) {
-      setError(
-        err.retryAfter
-          ? `${err.message} Try again in about ${Math.ceil(err.retryAfter / 60)} minutes.`
-          : err.message
-      );
+      setError(err.message);
       setBusy(false);
     }
   }
@@ -47,9 +47,46 @@ export default function AuthScreen({ onAuthed }) {
         </section>
 
         <section className="w-full max-w-md rounded-[2.75rem] bg-surface p-7 ring-8 ring-line/70 md:justify-self-end md:p-10">
-          <h2 className="font-display text-2xl font-bold text-ink">Sign in</h2>
+          <div className="flex rounded-full bg-page p-1" role="group" aria-label="Account">
+            {[
+              ["signin", "Sign in"],
+              ["register", "Create account"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={mode === id}
+                onClick={() => {
+                  setMode(id);
+                  setError("");
+                }}
+                className={`flex-1 rounded-full py-2.5 text-sm font-semibold ${
+                  mode === id ? "bg-brand text-onbrand" : "text-muted"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-          <form onSubmit={submit} className="mt-6 space-y-5">
+          <form onSubmit={submit} className="mt-7 space-y-5">
+            {registering && (
+              <div>
+                <label htmlFor="workspace" className={labelClass}>
+                  Workspace name
+                </label>
+                <input
+                  id="workspace"
+                  required
+                  maxLength={255}
+                  value={workspace}
+                  onChange={(e) => setWorkspace(e.target.value)}
+                  placeholder="Your team or company"
+                  className={inputClass}
+                />
+              </div>
+            )}
+
             <div>
               <label htmlFor="email" className={labelClass}>
                 Email
@@ -73,12 +110,14 @@ export default function AuthScreen({ onAuthed }) {
                 id="password"
                 type="password"
                 required
+                minLength={registering ? 8 : 1}
                 maxLength={128}
-                autoComplete="current-password"
+                autoComplete={registering ? "new-password" : "current-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={inputClass}
               />
+              {registering && <p className="mt-1.5 text-xs text-muted">At least 8 characters.</p>}
             </div>
 
             {error && (
@@ -92,13 +131,15 @@ export default function AuthScreen({ onAuthed }) {
               disabled={busy}
               className="w-full rounded-xl bg-brand py-3.5 font-semibold text-onbrand hover:bg-brand-hover disabled:opacity-60"
             >
-              {busy ? "Signing in…" : "Sign in"}
+              {busy
+                ? registering
+                  ? "Creating account…"
+                  : "Signing in…"
+                : registering
+                ? "Create account"
+                : "Sign in"}
             </button>
           </form>
-
-          <p className="mt-6 text-sm text-muted">
-            Accounts are created by your administrator. If you don't have one yet, ask them to set one up.
-          </p>
         </section>
       </div>
     </main>

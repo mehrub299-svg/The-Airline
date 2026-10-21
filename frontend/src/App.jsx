@@ -79,7 +79,7 @@ export default function App() {
   if (booting) {
     return (
       <div className="grid min-h-dvh place-items-center">
-        <p className="wordmark text-3xl text-navy">THE AIRLINE</p>
+        <p className="wordmark text-3xl text-ink">THE AIRLINE</p>
       </div>
     );
   }
