@@ -19,7 +19,7 @@ export default {
         alert: token("alert"),
         ok: token("ok"),
 
-        // Legacy tokens: still used by the current workspace screens until the assembly step
+        // Legacy tokens: used by the current screens until the assembly step replaces them
         altitude: "#E8EFF7",
         navy: "#0A1B3D",
         "navy-soft": "#16306B",

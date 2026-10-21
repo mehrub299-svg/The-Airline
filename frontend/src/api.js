@@ -156,22 +156,22 @@ async function streamChat({ message, chatId, documentIds, useV2, signal, onEvent
 
 // ---- public API ---------------------------------------------------------------------------
 export const api = {
+  async register(email, password, tenantName) {
+    saveTokens(
+      await getJson("/api/v1/auth/register", {
+        method: "POST",
+        data: { email, password, tenant_name: tenantName },
+        auth: false,
+      })
+    );
+  },
+
   async login(email, password) {
     saveTokens(
       await getJson("/api/v1/auth/login", {
         method: "POST",
         data: { email, password },
         auth: false,
-      })
-    );
-  },
-
-  // Returns a fresh session; every other session is revoked by the server.
-  async changePassword(currentPassword, newPassword) {
-    saveTokens(
-      await getJson("/api/v1/auth/password", {
-        method: "POST",
-        data: { current_password: currentPassword, new_password: newPassword },
       })
     );
   },
